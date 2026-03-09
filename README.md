@@ -1,149 +1,130 @@
 # Instagram Profile Scraper
 
-## Overview
-This project is a web scraper designed to extract the follower count and determine the account type (business or personal) for a list of Instagram profiles. The script uses Python, Selenium, and BeautifulSoup to perform the scraping and includes a proxy rotation mechanism to avoid IP bans and ensure smooth operation.
+A Python-based tool that scrapes public Instagram profile data using Selenium and Chrome. Supports login via saved cookies for accessing full profile details including bio, website, and address.
+
+---
 
 ## Features
-- Scrapes follower counts for Instagram profiles
-- Identifies if an account is a business or personal profile
-- Uses headless browser automation with Selenium
-- Employs proxy rotation to avoid IP bans
-- Handles errors and retries failed requests
+
+- Scrapes multiple Instagram profiles in a single run
+- Extracts: followers, following, post count, bio, hashtags, website, address, account type, verified status, and profile picture URL
+- Login session saved as cookies (no repeated manual login)
+- Automatic fallback to manual login if cookies expire
+- Anti-detection browser options (no headless, custom user-agent)
+- Optional proxy support
+
+---
+
+## Data Extracted
+
+| Field        | Description                              |
+|--------------|------------------------------------------|
+| Username     | Instagram handle + full name             |
+| Followers    | Formatted (e.g. 297.9M)                  |
+| Following    | Number of accounts followed              |
+| Posts        | Total posts count                        |
+| Verified     | Whether the account is verified          |
+| Account Type | Business / Professional / Private / Personal |
+| Bio          | Profile biography text                   |
+| Hashtags     | Hashtags found in bio                    |
+| Website      | External URL from profile                |
+| Address      | Business address (if available)          |
+| Profile Pic  | URL of the profile picture               |
+
+---
 
 ## Requirements
-- Python 3.7+
-- Selenium
-- BeautifulSoup4
-- ChromeDriver
-- A list of valid proxies
 
-## Installation
+- Python 3.8+
+- Google Chrome installed
+- Dependencies listed in `requirements.txt`
 
-1. **Clone the Repository**
+---
 
-```bash
-git clone https://github.com/splenwilz/instagram-profile-scraper.git
-cd instagram-profile-scraper
-```
+## Setup
 
-2. **Install Dependencies**
+1. **Clone the repository**
+   ```bash
+   git clone <repo-url>
+   cd instagram-profile-scraper
+   ```
 
-```bash
-pip install -r requirements.txt
-```
+2. **Create and activate a virtual environment**
+   ```bash
+   python -m venv .venv
+   # Windows
+   .venv\Scripts\Activate.ps1
+   # Mac/Linux
+   source .venv/bin/activate
+   ```
 
-3. **Download ChromeDriver**
-   - Download the version of ChromeDriver that matches your installed version of Chrome from [here](https://sites.google.com/a/chromium.org/chromedriver/downloads).
-   - Place the `chromedriver` executable in your system path or in the project directory.
+3. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-4. **Prepare the Proxy List**
-   - Create a file named `valid_proxy.txt` in the project directory.
-   - Add your list of proxies to this file, each on a new line.
+4. **Set your Instagram credentials** in `scrape_instagram.py`:
+   ```python
+   INSTAGRAM_USERNAME = "your_username"
+   INSTAGRAM_PASSWORD = "your_password"
+   ```
 
-5. **Prepare the List of Instagram Profiles**
-   - Create a file named `profiles.txt` in the project directory.
-   - Add the Instagram profile URLs you want to scrape, each on a new line.
+5. **Add profiles to scrape** in `profiles.txt` (one URL per line):
+   ```
+   https://www.instagram.com/nike/
+   https://www.instagram.com/nasa/
+   ```
+
+---
 
 ## Usage
-
-Run the script using the command below. The script will read the list of Instagram profiles from `profiles.txt` and use the proxies listed in `valid_proxy.txt` to scrape follower counts and account types.
 
 ```bash
 python scrape_instagram.py
 ```
 
-### Example Output
-
-```
-Profile: https://www.instagram.com/knowaloud
-Followers: 120 Followers, 273 Following, 15 Posts - See Instagram photos and videos from God'swill William (@knowaloud)
-Account Type: Business
-```
-
-## Detailed Script Explanation
-
-### `scrape_instagram.py`
-
-```python
-import random
-import time
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from webdriver_manager.chrome import ChromeDriverManager
-from bs4 import BeautifulSoup
-
-# Load proxies from file
-with open('valid_proxy.txt', 'r') as f:
-    proxies = f.read().split('\n')
-
-# Load Instagram profiles from file
-with open('profiles.txt', 'r') as f:
-    instagram_profiles = f.read().split('\n')
-
-# Function to set proxy for Selenium
-def set_proxy(options, proxy):
-    options.add_argument(f'--proxy-server={proxy}')
-
-# Function to scrape Instagram profile data
-def scrape_instagram_profile(url, proxy):
-    options = webdriver.ChromeOptions()
-    options.add_argument('--headless')
-    options.add_argument('--no-sandbox')
-    options.add_argument('--disable-dev-shm-usage')
-    set_proxy(options, proxy)
-    
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-
-    try:
-        driver.get(url)
-        time.sleep(3)  # Wait for the page to load
-
-        soup = BeautifulSoup(driver.page_source, 'html.parser')
-        meta_tag = soup.find('meta', property='og:description')
-        if meta_tag:
-            followers = meta_tag['content']
-            account_type = 'Business' if 'business' in driver.page_source else 'Personal'
-            print(f"Profile: {url}, Followers: {followers}, Account Type: {account_type}")
-        else:
-            print(f"Failed to retrieve data for {url}")
-
-    except Exception as e:
-        print(f"Error: {e}")
-    finally:
-        driver.quit()
-
-# Main loop to iterate through Instagram profiles and proxies
-for profile in instagram_profiles:
-    proxy = random.choice(proxies)
-    scrape_instagram_profile(profile, proxy)
-    time.sleep(random.uniform(1, 5))  # Random delay between requests
-
-print("Finished scraping profiles.")
-```
-
-### Explanation
-
-1. **Proxy Management**: The script reads a list of proxies from `valid_proxy.txt` and rotates them for each request to avoid IP bans.
-2. **Profile List**: Instagram profile URLs are read from `profiles.txt`.
-3. **Web Scraping**: The script uses Selenium with a headless Chrome browser to navigate Instagram profiles and extract follower counts and account type information using BeautifulSoup.
-4. **Error Handling**: The script includes try-except blocks to handle exceptions gracefully and ensure the browser is properly closed after each attempt.
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request or open an issue if you have suggestions for improvements or find any bugs.
-
-## License
-
-This project is licensed under the MIT License. See the `LICENSE` file for details.
-
-## Contact
-
-If you have any questions or need further assistance, please contact:
-
-[Godswill William]  
-[godswill@tasknify.com]
+On first run, a browser window will open for login. After successful login, the session is saved to `instagram_cookies.pkl` and reused on future runs.
 
 ---
 
-By following these steps, you can effectively use and understand the Instagram Profile Scraper. If you encounter any issues or have suggestions, please do not hesitate to reach out.
+## Configuration
+
+In `scrape_instagram.py`:
+
+| Variable      | Default | Description                          |
+|---------------|---------|--------------------------------------|
+| `USE_LOGIN`   | `True`  | Enable login for full data access    |
+| `USE_PROXIES` | `False` | Enable proxy rotation                |
+| `COOKIE_FILE` | `instagram_cookies.pkl` | Path to saved session file |
+
+---
+
+## File Structure
+
+```
+instagram-profile-scraper/
+├── scrape_instagram.py       # Main scraper script
+├── profiles.txt              # List of Instagram profile URLs to scrape
+├── requirements.txt          # Python dependencies
+├── instagram_cookies.pkl     # Saved login session (auto-generated)
+└── README.md
+```
+
+---
+
+## Notes
+
+- Cookies expire periodically (Instagram enforces session limits). Re-login will be prompted automatically.
+- Running too many requests too fast may trigger Instagram rate limiting. The script adds random delays between profiles to reduce this risk.
+- Scraping violates Instagram's Terms of Service. Use responsibly and only for personal/educational purposes.
+
+---
+
+## .gitignore Recommendations
+
+Add these to `.gitignore` to avoid leaking credentials or sessions:
+```
+instagram_cookies.pkl
+.venv/
+__pycache__/
+```
